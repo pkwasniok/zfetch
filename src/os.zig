@@ -57,9 +57,14 @@ pub const OSInfo = struct {
             version.deinit();
         }
 
-        self.name = ASCIIString.init(self.allocator);
-        try self.name.?.pushString("Linux");
-
         self.version = version_string;
+
+        if (self.version.?.indexOf("arch") != null) {
+            self.name = ASCIIString.init(self.allocator);
+            try self.name.?.pushString("Arch Linux");
+        } else {
+            self.name = ASCIIString.init(self.allocator);
+            try self.name.?.pushString("Linux");
+        }
     }
 };
