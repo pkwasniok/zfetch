@@ -7,12 +7,14 @@ pub const OSInfo = struct {
     allocator: std.mem.Allocator,
     name: ?ASCIIString,
     version: ?ASCIIString,
+    uptime: ?u32,
 
     pub fn init(allocator: std.mem.Allocator) Self {
         return Self{
             .allocator = allocator,
             .name = null,
             .version = null,
+            .uptime = null,
         };
     }
 
@@ -65,6 +67,25 @@ pub const OSInfo = struct {
         } else {
             self.name = ASCIIString.init(self.allocator);
             try self.name.?.pushString("Linux");
+        }
+
+        const uptime_file = try std.fs.openFileAbsolute("/proc/uptime", .{ .mode = .read_only });
+        defer uptime_file.close();
+
+        {
+            const reader = uptime_file.reader();
+
+            const buffer = try reader.readAllAlloc(self.allocator, 1024);
+            defer self.allocator.free(buffer);
+
+            var string = ASCIIString.init(self.allocator);
+            defer string.deinit();
+
+            try string.pushString(buffer[0 .. buffer.len-1]);
+
+            try string.removeString(string.indexOf(".").?, string.length());
+
+            self.uptime = try std.fmt.parseInt(u32, string.buffer[0 .. string.length()], 10);
         }
     }
 };

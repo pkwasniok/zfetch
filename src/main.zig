@@ -15,7 +15,8 @@ const DEFAULT_TEMPLATE =
     \\  └─Free: {memory.free} KiB
     \\OS
     \\├─Name: {os.name}
-    \\└─Version: {os.version}
+    \\├─Version: {os.version}
+    \\└─Uptime: {os.uptime}
     \\
 ;
 
@@ -28,15 +29,9 @@ pub fn main() !void {
     const parsing_result = try cli.parse(allocator);
 
     switch (parsing_result) {
-        .help => {
-            try handle_help();
-        },
-        .version => {
-            try handle_version();
-        },
-        .default => {
-            try handle_default(allocator);
-        },
+        .help => try handle_help(),
+        .version => try handle_version(),
+        .default => try handle_default(allocator),
     }
 }
 
@@ -124,6 +119,17 @@ fn handle_default(allocator: std.mem.Allocator) !void {
     if (os_info.version) |value| {
         try map.put("os.version", value.string);
     }
+
+    var uptime: ?[]u8 = null;
+    if (os_info.uptime) |value| {
+        const seconds = value;
+        const minutes = seconds / 60;
+        const hours = minutes / 60;
+
+        uptime = try std.fmt.allocPrint(allocator, "{d}h {d}m {d}s", .{ hours, minutes % 60, seconds % 60 });
+        try map.put("os.uptime", uptime.?);
+    }
+    defer if (uptime) |buff| allocator.free(buff);
 
     var result = try template.parse(allocator, DEFAULT_TEMPLATE, map);
     defer result.deinit();
