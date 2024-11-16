@@ -54,7 +54,7 @@ fn handle_help() !void {
 fn handle_version() !void {
     const stdout = std.io.getStdOut().writer();
 
-    try stdout.print("sysfetch 0.1.0\n", .{});
+    try stdout.print("sysfetch 0.1.1\n", .{});
 }
 
 fn handle_default(allocator: std.mem.Allocator) !void {
@@ -136,4 +136,3 @@ fn handle_default(allocator: std.mem.Allocator) !void {
 
     try stdout.print("{s}", .{result});
 }
-

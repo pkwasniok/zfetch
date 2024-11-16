@@ -29,63 +29,79 @@ pub const OSInfo = struct {
     }
 
     pub fn fetch(self: *Self) !void {
-        const version_file = try std.fs.openFileAbsolute("/proc/version", .{ .mode = .read_only });
-        defer version_file.close();
-
-        var version_string = blk: {
-            const reader = version_file.reader();
-
-            const buffer = try reader.readAllAlloc(self.allocator, 2048);
-            defer self.allocator.free(buffer);
-
-            var string = ASCIIString.init(self.allocator);
-
-            try string.pushString(buffer[0 .. buffer.len - 1]);
-
-            break :blk string;
-        };
-
-        try version_string.removeString(0, 14);
-
-        const index = version_string.indexOf(" ").?;
-
-        try version_string.removeString(index, 2048);
+        const os_name = try fetch_os_name(self.allocator);
 
         if (self.name) |*name| {
             name.deinit();
         }
 
+        self.name = os_name;
+
+        const os_version = try fetch_os_version(self.allocator);
+
         if (self.version) |*version| {
             version.deinit();
         }
 
-        self.version = version_string;
+        self.version = os_version;
 
-        if (self.version.?.indexOf("arch") != null) {
-            self.name = ASCIIString.init(self.allocator);
-            try self.name.?.pushString("Arch Linux");
-        } else {
-            self.name = ASCIIString.init(self.allocator);
-            try self.name.?.pushString("Linux");
-        }
+        const os_uptime = try fetch_os_uptime(self.allocator);
+        self.uptime = os_uptime;
+    }
 
-        const uptime_file = try std.fs.openFileAbsolute("/proc/uptime", .{ .mode = .read_only });
-        defer uptime_file.close();
+    fn fetch_os_name(allocator: std.mem.Allocator) !ASCIIString {
+        const file = try std.fs.openFileAbsolute("/proc/version", .{ .mode = .read_only });
+        defer file.close();
 
-        {
-            const reader = uptime_file.reader();
+        const reader = file.reader();
 
-            const buffer = try reader.readAllAlloc(self.allocator, 1024);
-            defer self.allocator.free(buffer);
+        const buffer = try reader.readAllAlloc(allocator, 1024);
+        defer allocator.free(buffer);
 
-            var string = ASCIIString.init(self.allocator);
-            defer string.deinit();
+        var string = ASCIIString.init(allocator);
 
-            try string.pushString(buffer[0 .. buffer.len-1]);
+        try string.pushString(buffer[0 .. buffer.len - 1]);
+        try string.removeString(string.indexOf(" ").?, 1024);
 
-            try string.removeString(string.indexOf(".").?, string.length());
+        return string;
+    }
 
-            self.uptime = try std.fmt.parseInt(u32, string.buffer[0 .. string.length()], 10);
-        }
+    fn fetch_os_version(allocator: std.mem.Allocator) !ASCIIString {
+        const file = try std.fs.openFileAbsolute("/proc/version", .{ .mode = .read_only });
+        defer file.close();
+
+        const reader = file.reader();
+
+        const buffer = try reader.readAllAlloc(allocator, 1024);
+        defer allocator.free(buffer);
+
+        var string = ASCIIString.init(allocator);
+
+        try string.pushString(buffer[0 .. buffer.len - 1]);
+        try string.removeString(0, string.indexOf(" ").? + 1);
+        try string.removeString(0, string.indexOf(" ").? + 1);
+        try string.removeString(string.indexOf(" ").? + 1, 1024);
+
+        return string;
+    }
+
+    fn fetch_os_uptime(allocator: std.mem.Allocator) !u32 {
+        const file = try std.fs.openFileAbsolute("/proc/uptime", .{ .mode = .read_only });
+        defer file.close();
+
+        const reader = file.reader();
+
+        const buffer = try reader.readAllAlloc(allocator, 1024);
+        defer allocator.free(buffer);
+
+        var string = ASCIIString.init(allocator);
+        defer string.deinit();
+
+        try string.pushString(buffer[0 .. buffer.len - 1]);
+        try string.removeString(string.indexOf(".").?, string.length());
+
+        const uptime = try std.fmt.parseInt(u32, string.buffer[0..string.length()], 10);
+
+        return uptime;
     }
 };
