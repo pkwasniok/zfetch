@@ -20,6 +20,23 @@ const DEFAULT_TEMPLATE =
     \\
 ;
 
+const HELP_TEMPLATE =
+    \\Usage: sysfetch [OPTIONS]
+    \\
+    \\Sysfetch is a Neofetch alternative for Linux written in Zig.
+    \\
+    \\OPTIONS:
+    \\    DEFAULT      display system information
+    \\    --help       display help message
+    \\    --version    display version information
+    \\
+;
+
+const VERSION_TEMPLATE =
+    \\sysfetch 0.1.1
+    \\
+;
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.debug.assert(gpa.deinit() == .ok);
@@ -38,23 +55,13 @@ pub fn main() !void {
 fn handle_help() !void {
     const stdout = std.io.getStdOut().writer();
 
-    try stdout.print(
-        \\ Usage: sysfetch [OPTIONS]
-        \\
-        \\ Sysfetch is a Neofetch alternative for Linux written in Zig.
-        \\
-        \\ OPTIONS:
-        \\     DEFAULT      display system information
-        \\     --help       display help message
-        \\     --version    display version information
-        \\
-    , .{});
+    try stdout.print(HELP_TEMPLATE, .{});
 }
 
 fn handle_version() !void {
     const stdout = std.io.getStdOut().writer();
 
-    try stdout.print("sysfetch 0.1.1\n", .{});
+    try stdout.print(VERSION_TEMPLATE, .{});
 }
 
 fn handle_default(allocator: std.mem.Allocator) !void {
